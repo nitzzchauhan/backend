@@ -1,10 +1,14 @@
 import jwt from "jsonwebtoken";
 import { User } from "../model/user.model.js"
 import bcrypt from 'bcryptjs'
+import cloudinary from "../utils/cloudinary.js";
+import fs from 'fs'
 
 
 
 export const register = async (req, res) => {
+    console.log("i ma register")
+    console.log(req.body)
     try {
         const { fullName, email, phoneNumber, password, role } = req.body;
 
@@ -15,6 +19,20 @@ export const register = async (req, res) => {
                 success: false
             });
         }
+
+        // cloudinary 
+        var cloudinaryResult = {
+            url: ""
+        }
+        console.log("bjdsbfdsjbjdfsbvkjdfs")
+        console.log(req.file)
+        if (req.file) {
+            console.log("hello from cloudinary")
+            var cloudinaryResult = await cloudinary.uploader.upload(req.file.path)
+        }
+
+        // console.log(result.url)
+
 
         // ✅ Check if a user with the same email already exists
         const existingUser = await User.findOne({ email });
@@ -37,18 +55,38 @@ export const register = async (req, res) => {
             password: hashedPassword,
             role,
             profile: {
-                profilePhoto: "" // Default profile photo (can update later)
+                profilePhoto: cloudinaryResult.url // Default profile photo (can update later)
             }
         });
+
+        // user saved
+        if (req.file) {
+
+            console.log("file deleting")
+            fs.unlink(req.file.path, () => {
+                console.log("file deleted")
+            })
+        }
 
         // ✅ Send success response
         return res.status(201).json({
             message: "User has been registered successfully",
             success: true
         });
+        // fs create delete write read
+
 
     } catch (error) {
-        console.error("Error in register:", error.message);
+        if (error.response) {
+            // ✅ JSON message from backend is here
+
+            console.log("object");
+            console.log("Error Message:", error.response.data.message);
+            console.log("Full error response:", error.response.data);
+        } else {
+            console.error("Network Error:", error.message);
+        }
+
         return res.status(500).json({
             message: "Internal Server Error",
             success: false
@@ -81,7 +119,7 @@ export const login = async (req, res) => {
                 message: "Incorrect email and password",
                 success: false
             });
-        }        
+        }
         // hello
         if (role !== user.role) {
             return res.status(400).json({
@@ -101,7 +139,7 @@ export const login = async (req, res) => {
             email: user.email,
             phoneNumber: user.phoneNumber,
             role: user.role,
-            profile: user.profile
+            profile: user.profile.profilePhoto
         }
         // user = await User.findOne({ email }).select("-password");
 
@@ -113,15 +151,19 @@ export const login = async (req, res) => {
         //         token: token
         //     }
         // )
-
+        res.cookie('token', token, {
+            maxAge: 1 * 24 * 60 * 60 * 1000,
+            httpsOnly: true,
+            sameSite: 'strict'
+        })
         return res.status(200).cookie('access_token', `Bearer ${token}`, {
-    expires: new Date(Date.now() + 8 * 3600000) // cookie will be removed after 8 hours
-  }).json(
+            expires: new Date(Date.now() + 8 * 3600000) // cookie will be removed after 8 hours
+        }).json(
             {
                 message: "Login Successful",
                 success: true,
                 user: user,
-                token:token
+                token: token
             }
         )
 
@@ -131,14 +173,14 @@ export const login = async (req, res) => {
 
 }
 export const logout = async (req, res) => {
-    try{
-        return res.status(200).cookie("token","").json({
-            message:"User Logged out successfully",
-            success:true
+    try {
+        return res.status(200).cookie("token", "").json({
+            message: "User Logged out successfully",
+            success: true
         })
     }
-    catch(error){
-            console.log(error.message)
+    catch (error) {
+        console.log(error.message)
     }
 }
 export const updateProfile = async (req, res) => {
@@ -150,3 +192,15 @@ export const updateProfile = async (req, res) => {
 // req.body --> from form
 // req.params --> url parameter
 // req.query --> www.google.com/q?search=njkvndfkjgndfkjgkjdfnkgdf
+
+
+
+
+
+
+
+
+
+// mime type
+// sanitize
+// https(encrypt)  -- http

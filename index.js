@@ -4,19 +4,21 @@ import userRouter from './routes/user.route.js'
 import { connectDb } from './utils/db.js'
 import dotenv from 'dotenv'
 import cors from 'cors'
+import cookieParser from 'cookie-parser'
 
 const corsOptions ={
     origin:"http://localhost:5173",
-    credential:true
+    credentials:true
 }
 
 
 dotenv.config({})
 
 const app = express()
-app.use(express.json())
-app.use(express.urlencoded({extended:true}))
-app.use(cors(corsOptions))
+app.use(express.json()) //to handle raw json 
+app.use(express.urlencoded({extended:true})) // key value pair
+app.use(cors(corsOptions)) // cors policy
+app.use(cookieParser())
 
 
 app.use(logger('dev'))
